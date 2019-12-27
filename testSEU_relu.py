@@ -1,16 +1,24 @@
 import torch
 from torch import nn
+import argparse
+
 from utils import relative_diff, SEU_test
 from models import SameConv_ReLU as Net
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--relu', action='store_true', default=True,
+            help='dataset path')
+    parser.add_argument('--device', action='store', default='cuda:0',
+            help='input the device you want to use')
+    args = parser.parse_args()
     num_layers = 3
     kernel_size = 5
     in_channels = 3
     out_channels = 3
     netParams = [num_layers, kernel_size, in_channels, out_channels]
     nData  = 1
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
     model    = Net(num_layers, kernel_size, in_channels, out_channels)
     model.to(device)
