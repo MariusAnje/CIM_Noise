@@ -1,0 +1,21 @@
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8 gcc/8.3.0
+10
+Traceback (most recent call last):
+  File "testSEU.py", line 81, in <module>
+    theOutput = pModel(theInput)
+  File "/afs/crc.nd.edu/user/z/zyan2/.local/lib/python3.7/site-packages/torch/nn/modules/module.py", line 541, in __call__
+    result = self.forward(*input, **kwargs)
+  File "testSEU.py", line 23, in forward
+    x = self.conv5(x)
+  File "/afs/crc.nd.edu/user/z/zyan2/.local/lib/python3.7/site-packages/torch/nn/modules/module.py", line 541, in __call__
+    result = self.forward(*input, **kwargs)
+  File "/afs/crc.nd.edu/user/z/zyan2/.local/lib/python3.7/site-packages/torch/nn/modules/conv.py", line 345, in forward
+    return self.conv2d_forward(input, self.weight)
+  File "/afs/crc.nd.edu/user/z/zyan2/.local/lib/python3.7/site-packages/torch/nn/modules/conv.py", line 342, in conv2d_forward
+    self.padding, self.dilation, self.groups)
+RuntimeError: CUDA out of memory. Tried to allocate 30.00 MiB (GPU 0; 10.92 GiB total capacity; 10.14 GiB already allocated; 22.50 MiB free; 1.98 MiB cached)
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8

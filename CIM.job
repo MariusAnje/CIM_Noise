@@ -1,0 +1,12 @@
+#!/bin/csh
+
+#$ -M zyan2@nd.edu
+#$ -m abe
+#$ -r y
+#$ -N CIM 
+#$ -pe smp 4
+
+module load python
+
+python -u testSEU.py 
+

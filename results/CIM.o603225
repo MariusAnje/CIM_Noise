@@ -1,0 +1,13 @@
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8 gcc/8.3.0
+6
+tensor(1.6707) tensor(0.9020)
+tensor(1.6287) tensor(0.9926)
+tensor(1.7540) tensor(1.0619)
+tensor(1.5674) tensor(0.9846)
+tensor(1.6296) tensor(0.9500)
+tensor(0.9337) tensor(0.7428)
+Loading python/3.7.3
+  Loading requirement: tcl/8.6.8
