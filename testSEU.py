@@ -1,42 +1,31 @@
 import torch
 from torch import nn
+import argparse
 
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 3, kernel_size=5, stride=1, padding=2, bias=False)
-        self.conv2 = nn.Conv2d(3, 3, kernel_size=5, stride=1, padding=2, bias=False)
-        self.conv3 = nn.Conv2d(3, 3, kernel_size=5, stride=1, padding=2, bias=False)
-        self.conv4 = nn.Conv2d(3, 3, kernel_size=5, stride=1, padding=2, bias=False)
-        self.conv5 = nn.Conv2d(3, 3, kernel_size=5, stride=1, padding=2, bias=False)
-        self.conv6 = nn.Conv2d(3, 3, kernel_size=5, stride=1, padding=2, bias=False)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        x = self.conv5(x)
-        x = self.conv6(x)
-        return x
-
-def relative_diff(GT, pOutput):
-    if len(GT) != len(pOutput):
-        raise Exception("length of GT and Output are different")
-    size = GT[0].size()
-    totalSize = 1
-    for item in size:
-        totalSize *= item
-    rel = 0
-    for i in range(len(GT)):
-        rel += ((((GT[i]-pOutput[i])/GT[i]).abs()).sum()/totalSize)
-    return rel/len(GT)
+from utils import relative_diff, SEU_test
+from models import SameConv_ReLU, SameConv
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--relu', action='store_true', default=False,
+            help='dataset path')
+    parser.add_argument('--device', action='store', default='cuda:0',
+            help='input the device you want to use')
+    args = parser.parse_args()
+    num_layers = 6
+    kernel_size = 5
+    in_channels = 3
+    out_channels = 3
+    netParams = [num_layers, kernel_size, in_channels, out_channels]
     nData  = 16
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
-    model    = Net()
+    if args.relu:
+        Net = SameConv_ReLU
+    else:
+        Net = SameConv
+
+    model    = Net(num_layers, kernel_size, in_channels, out_channels)
     model.to(device)
     dataset  = []
 
@@ -52,31 +41,12 @@ if __name__ == "__main__":
         
 
     state_dict = model.state_dict()
-
-    diffResult = []
-    print(len(state_dict))
-    for key in state_dict.keys():
-        size = state_dict[key].size()
-        diffResult_item = torch.zeros(size)
-        for i in range(size[0]):
-            for o in range(size[1]):
-                for r in range(size[2]):
-                    for s in range(size[3]):
-                        pModel = Net()
-                        pModel.load_state_dict(state_dict)
-                        pState = pModel.state_dict()
-                        pState[key][i,o,r,s].data *= -1
-                        pModel.to(device)
-                        pOutput = []
-                        for theInput in dataset:
-                            theInput  = theInput.to(device)
-                            theOutput = pModel(theInput)
-                            pOutput.append(theOutput)
-                        diffResult_item.data[i,o,r,s] = relative_diff(GT,pOutput)
-        diffResult.append(diffResult_item)
-    
-    torch.save(diffResult, "result.pt")
+    diffResult = SEU_test(state_dict, Net, dataset, GT, device, netParams)
+    if args.relu:
+        torch.save(diffResult, "result_relu.pt")
+    else:
+        torch.save(diffResult, "result.pt")
     for tensor in diffResult:
-        print(tensor.mean(), tensor.std())
+        print(f"mean: {tensor.mean().cpu().numpy():.2f}; std: {tensor.std().cpu().numpy():.2f}; max: {tensor.max().cpu().numpy():.2f}")
     #theOutput = model(theInput)
    

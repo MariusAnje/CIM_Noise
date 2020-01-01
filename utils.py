@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-def relative_diff(GT, pOutput):
+def relative_single_diff(GT, pOutput):
     eps = pow(2,-16)
     if len(GT) != len(pOutput):
         raise Exception("length of GT and Output are different")
@@ -14,7 +14,30 @@ def relative_diff(GT, pOutput):
         rel += ((((GT[i]-pOutput[i])/(GT[i]+eps)).abs()).sum()/totalSize)
     return rel/len(GT)
 
-def SEU_test(state_dict, Net, dataset, GT, device, netParams):
+def relative_sum_diff(GT, pOutput):
+    eps = pow(2,-16)
+    if len(GT) != len(pOutput):
+        raise Exception("length of GT and Output are different")
+    size = GT[0].size()
+    totalSize = 1
+    for item in size:
+        totalSize *= item
+    rel = 0
+    for i in range(len(GT)):
+        rel += 2 * (GT[i]-pOutput[i]).abs().sum()/(GT[i].abs()+pOutput[i].abs()).sum()
+        # rel += ((((GT[i]-pOutput[i])/(GT[i]+eps)).abs()).sum()/totalSize)
+    return rel/len(GT)
+
+def copy_state_dict(state_dict1, state_dict2):
+    keys1 = list(state_dict1.keys())
+    keys2 = list(state_dict2.keys())
+
+    for i in range(len(keys1)):
+        state_dict2[keys2[i]] = state_dict1[keys1[i]]
+    
+    return state_dict2
+
+def SEU_test(state_dict, Net, dataset, GT, device, netParams, metric):
     diffResult = []
     # print(len(state_dict))
     for key in state_dict.keys():
@@ -34,7 +57,7 @@ def SEU_test(state_dict, Net, dataset, GT, device, netParams):
                             theInput  = theInput.to(device)
                             theOutput = pModel(theInput)
                             pOutput.append(theOutput)
-                        diffResult_item.data[i,o,r,s] = relative_diff(GT,pOutput)
+                        diffResult_item.data[i,o,r,s] = metric(GT,pOutput)
         diffResult.append(diffResult_item)
     
     return diffResult

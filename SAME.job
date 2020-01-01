@@ -4,11 +4,11 @@
 #$ -m abe
 #$ -r y
 #$ -q gpu
-#$ -N res_CIM 
+#$ -N same_sum_CIM 
 #$ -pe smp 4
 #$ -l gpu=1
 
 module load python
 
-python -u testSEU.py --relu 
+python -u same_model_test.py --metric sum
 
