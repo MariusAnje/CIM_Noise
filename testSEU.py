@@ -2,7 +2,8 @@ import torch
 from torch import nn
 import argparse
 
-from utils import relative_diff, SEU_test
+from utils import relative_single_diff as relative_diff
+from utils import SEU_test
 from models import SameConv_ReLU, SameConv
 
 if __name__ == "__main__":
@@ -41,7 +42,7 @@ if __name__ == "__main__":
         
 
     state_dict = model.state_dict()
-    diffResult = SEU_test(state_dict, Net, dataset, GT, device, netParams)
+    diffResult = SEU_test(state_dict, Net, dataset, GT, device, netParams, relative_diff)
     if args.relu:
         torch.save(diffResult, "result_relu.pt")
     else:
