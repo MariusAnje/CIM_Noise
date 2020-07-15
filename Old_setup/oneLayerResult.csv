@@ -1,0 +1,13 @@
+neural arch,3,5,5,3,,,,,,,
+input, input, weight, weight, noise, noise, rel, rel,  rel, abs, abs,  abs
+mean,  std,   mean,   std,    mean,  std,   dis, mean, std, dis, mean, std
+0,1,0,1,0,1.00E-02,  gaussian,0.0102,0.0005,,,
+0,1,0,1,0,1.00E-02,  gaussian,0.0101,0.0005,gaussian,0.0679,0.0032
+0,1,0,1,0,1.00E-02,  gaussian,0.0101,0.0005,gaussian,0.0678,0.0032
+0,1,0,1,0,1,  gaussian,0.8592,0.0328,,,
+0,1,0,1,0,1,  gaussian,0.8342,0.0325,,,
+0,1,0,1,0,1,  gaussian,0.8423,0.0323,,,
+0,1,0,1,0,1,gaussian,0.8226,0.0322,gaussian,6.7918,0.3208
+0,1,0,1,0,1,gaussian,0.8012,0.0318,gaussian,6.8056,0.325
+0,1,0,10,0,1,gaussian,0.0985,0.0046,gaussian,6.7966,0.3173
+0,1,0,10,0,1,gaussian,0.0989,0.0048,gaussian,6.7985,0.3324

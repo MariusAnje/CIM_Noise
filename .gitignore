@@ -3,3 +3,5 @@
 *.pyc
 *.pt
 *.o*
+*.png
+*.npy

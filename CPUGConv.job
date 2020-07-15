@@ -4,11 +4,11 @@
 #$ -m abe
 #$ -r y
 #$ -q gpu
-#$ -N MC_All_10K
-#$ -pe smp 4
+#$ -N GConv1e4 
+#$ -pe smp 8
 #$ -l gpu=1
 
 module load python
 
-python -u MC_All.py 
+python -u GConv.py
 

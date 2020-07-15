@@ -1,6 +1,19 @@
 import torch
 from torch import nn
 
+def abs_diff(GT, pOutput):
+    eps = pow(2,-16)
+    if len(GT) != len(pOutput):
+        raise Exception("length of GT and Output are different")
+    size = GT[0].size()
+    totalSize = 1
+    for item in size:
+        totalSize *= item
+    rel = 0
+    for i in range(len(GT)):
+        rel += (GT[i]-pOutput[i]).abs().sum()/ totalSize
+    return rel/len(GT)
+
 def relative_single_diff(GT, pOutput):
     eps = pow(2,-16)
     if len(GT) != len(pOutput):
