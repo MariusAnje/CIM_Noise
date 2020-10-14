@@ -69,13 +69,20 @@ if __name__ == "__main__":
 
     # Hyper parameters for training offline and inference online
     batchSize = 128
-    device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # dataset extracting and data preprocessing
+    normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     transform = transforms.Compose(
     [transforms.ToTensor(),
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    trainset = torchvision.datasets.CIFAR10(root='~/Private/data', train=True, download=True, transform=transform)
+    train_transform = transforms.Compose([
+            transforms.RandomAffine(10, translate=(0.07, 0.07)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+            ])
+    trainset = torchvision.datasets.CIFAR10(root='~/Private/data', train=True, download=True, transform=train_transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batchSize, shuffle=True, num_workers=4)
     testset = torchvision.datasets.CIFAR10(root='~/Private/data', train=False, download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batchSize, shuffle=False, num_workers=4)
@@ -96,7 +103,7 @@ if __name__ == "__main__":
         train(20, device)
 
         # Validation
-        state_dict = torch.load("./CIFAR10_BN.pt")
+        state_dict = torch.load("./CIFAR10_BN_Aug.pt")
         net.load_state_dict(state_dict)
         print(f"Test accuracy: {test(device)}")
 
@@ -104,7 +111,7 @@ if __name__ == "__main__":
         # Online inference
 
         # The pretrained model
-        state_dict = torch.load("./CIFAR10_BN.pt")
+        state_dict = torch.load("./CIFAR10_BN_Aug.pt")
         net.load_state_dict(state_dict)
 
         # Actual inference
