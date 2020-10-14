@@ -100,7 +100,7 @@ if __name__ == "__main__":
         optimizer = optim.Adam(net.parameters(), lr=1e-4, weight_decay=0)
 
         # Training
-        train(20, device)
+        train(50, device)
 
         # Validation
         state_dict = torch.load("./CIFAR10_BN_Aug.pt")
