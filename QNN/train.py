@@ -81,10 +81,11 @@ if __name__ == "__main__":
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
     # dataset extracting and data preprocessing
-    normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
     transform = transforms.Compose(
     [transforms.ToTensor(),
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    #  transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        normalize)]
     train_transform = transforms.Compose([
             transforms.RandomAffine(10, translate=(0.07, 0.07)),
             transforms.RandomHorizontalFlip(),
