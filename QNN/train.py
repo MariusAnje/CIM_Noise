@@ -105,7 +105,7 @@ if __name__ == "__main__":
         # loss function and optimizer
         criterion = nn.CrossEntropyLoss()
         # optimizer = optim.SGD(net.parameters(), lr=1e-5, momentum=0.9)
-        optimizer = optim.Adam(net.parameters(), lr=1e-4, weight_decay=0)
+        optimizer = optim.Adam(net.parameters(), lr=1e-3, weight_decay=0)
 
         # Training
         train(args.nruns, device)
