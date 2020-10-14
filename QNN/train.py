@@ -63,13 +63,21 @@ def test(device):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--device', action='store', default='cuda:0',
+            help='input the device you want to use')
+    parser.add_argument('--batch_size', action='store', type=int, default=256,
+            help='input the batch size used in training and inference')
+    parser.add_argument('--nruns', action='store', type=int, default=100,
+            help='number of runs for test')
+    args = parser.parse_args()
     
     # Determining the use scheme
     offline = True
 
     # Hyper parameters for training offline and inference online
-    batchSize = 128
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    batchSize = args.batch_size
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
     # dataset extracting and data preprocessing
     normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -100,7 +108,7 @@ if __name__ == "__main__":
         optimizer = optim.Adam(net.parameters(), lr=1e-4, weight_decay=0)
 
         # Training
-        train(50, device)
+        train(args.nruns, device)
 
         # Validation
         state_dict = torch.load("./CIFAR10_BN_Aug.pt")
