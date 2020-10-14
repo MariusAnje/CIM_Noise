@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from quantNN import *
+import math
 
 class NeuroSIM_Model(nn.Module):
     def __init__(self):
@@ -65,6 +66,35 @@ class NeuroSIM_BN_Model(nn.Module):
             nn.ReLU(),
             QLinear(N, 5, 1024, 10)
         )
+        self.init_model()
+    
+    def init_model(self, model_init='he_fout', init_div_groups=False):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                if model_init == 'he_fout':
+                    n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                    if init_div_groups:
+                        n /= m.groups
+                    m.weight.data.normal_(0, math.sqrt(2. / n))
+                elif model_init == 'he_fin':
+                    n = m.kernel_size[0] * m.kernel_size[1] * m.in_channels
+                    if init_div_groups:
+                        n /= m.groups
+                    m.weight.data.normal_(0, math.sqrt(2. / n))
+                elif model_init == 'None':
+                    pass
+                else:
+                    raise NotImplementedError
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm1d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
     def forward(self, x):
         return self.classifier(self.features(x).view(-1,8192))
 
