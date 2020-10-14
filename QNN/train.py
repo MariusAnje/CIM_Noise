@@ -85,7 +85,7 @@ if __name__ == "__main__":
     transform = transforms.Compose(
     [transforms.ToTensor(),
     #  transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-        normalize)]
+        normalize])
     train_transform = transforms.Compose([
             transforms.RandomAffine(10, translate=(0.07, 0.07)),
             transforms.RandomHorizontalFlip(),
