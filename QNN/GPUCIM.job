@@ -10,5 +10,6 @@
 
 module load python
 
-python -u GConv.py 
+# python -u GConv.py 
+python -u train.py
 
