@@ -4,6 +4,7 @@ import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import argparse
 # tqdm is imported for better visualization
 import tqdm
 import modelNeuroSIM
@@ -40,7 +41,7 @@ def train(numEpoch, device):
         print(f"Epoch {epoch}: test accuracy: {acc:.4f}")
         if acc > best_Acc:
             best_Acc = acc
-            torch.save(net.state_dict(), './CIFAR10_BN.pt')
+            torch.save(net.state_dict(), './CIFAR10_BN_Aug.pt')
 
 def test(device):
     """
