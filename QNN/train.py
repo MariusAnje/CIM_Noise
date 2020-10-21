@@ -8,6 +8,7 @@ import argparse
 # tqdm is imported for better visualization
 import tqdm
 import modelNeuroSIM
+import resnet
 
 def train(numEpoch, device):
     """
@@ -41,7 +42,7 @@ def train(numEpoch, device):
         print(f"Epoch {epoch}: test accuracy: {acc:.4f}")
         if acc > best_Acc:
             best_Acc = acc
-            torch.save(net.state_dict(), './CIFAR10_BN_Aug.pt')
+            torch.save(net.state_dict(), f'./CIFAR10_BN_Aug_{args.model}.pt')
 
 def test(device):
     """
@@ -71,6 +72,8 @@ if __name__ == "__main__":
             help='input the batch size used in training and inference')
     parser.add_argument('--nruns', action='store', type=int, default=100,
             help='number of runs for test')
+    parser.add_argument('--model', action='store', type=str, default='NS', choices=['NS', 'RES'],
+            help='which model to use')
     args = parser.parse_args()
     
     # Determining the use scheme
@@ -98,7 +101,10 @@ if __name__ == "__main__":
     testloader = torch.utils.data.DataLoader(testset, batch_size=batchSize, shuffle=False, num_workers=4)
 
     # model
-    net = modelNeuroSIM.NeuroSIM_BN_Model()
+    if args.model == 'NS':
+        net = modelNeuroSIM.NeuroSIM_BN_Model()
+    elif args.model == 'RES':
+        net = resnet.resnet56_cifar(num_classes=10)
     net.to(device)
 
     if offline:
@@ -106,14 +112,14 @@ if __name__ == "__main__":
         
         # loss function and optimizer
         criterion = nn.CrossEntropyLoss()
-        # optimizer = optim.SGD(net.parameters(), lr=1e-5, momentum=0.9)
-        optimizer = optim.Adam(net.parameters(), lr=1e-4, weight_decay=0)
+        # optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=0.9)
+        optimizer = optim.Adam(net.parameters(), lr=1e-3)
 
         # Training
         train(args.nruns, device)
 
         # Validation
-        state_dict = torch.load("./CIFAR10_BN_Aug.pt")
+        state_dict = torch.load(f"./CIFAR10_BN_Aug_{args.model}.pt")
         net.load_state_dict(state_dict)
         print(f"Test accuracy: {test(device)}")
 
@@ -121,7 +127,7 @@ if __name__ == "__main__":
         # Online inference
 
         # The pretrained model
-        state_dict = torch.load("./CIFAR10_BN_Aug.pt")
+        state_dict = torch.load(f"./CIFAR10_BN_Aug_{args.model}.pt")
         net.load_state_dict(state_dict)
 
         # Actual inference

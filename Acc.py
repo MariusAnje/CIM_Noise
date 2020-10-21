@@ -147,12 +147,13 @@ if __name__ == "__main__":
         correct += (predicted == labels).sum()
         total   += len(predicted)
     
+    acc_filename = correct
     print(f"{correct}/{total} = {correct*1./total:.4f}")
 
 
     noise = (0,5e-2)
     pOutput = []
-    nRuns = 10000
+    nRuns = 10
     acc = []
     import tqdm
     for _ in tqdm.tqdm(range(nRuns)):
@@ -187,6 +188,7 @@ if __name__ == "__main__":
     # plt.hist(acc,30)
     # plt.savefig(f"fig{j}")
     # plt.show()
-    f = open(f"acc9874","wb+")
-    pickle.dump(acc,f)
+    # f = open(f"acc9874","wb+")
+    # pickle.dump(acc,f)
+    torch.save(acc, f"acc_{acc_filename}_{nRuns}")
    

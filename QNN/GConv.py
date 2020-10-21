@@ -10,9 +10,10 @@ from matplotlib import pyplot as plt
 import pickle
 import tqdm
 import modelNeuroSIM
+import resnet
 
 
-net = modelNeuroSIM.NeuroSIM_BN_Model()
+# net = modelNeuroSIM.NeuroSIM_BN_Model()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -20,6 +21,8 @@ if __name__ == "__main__":
             help='dataset path')
     parser.add_argument('--device', action='store', default='cuda:0',
             help='input the device you want to use')
+    parser.add_argument('--nRuns', type= int, action='store', default=10000,
+            help='number of runs')
     args = parser.parse_args()
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     # device = torch.device("cpu")
@@ -34,11 +37,14 @@ if __name__ == "__main__":
     testset = torchvision.datasets.CIFAR10(root='~/Private/data', train=False, download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=False, num_workers=4)
 
-    model = modelNeuroSIM.NeuroSIM_BN_Model()
+    # model = modelNeuroSIM.NeuroSIM_BN_Model()
+    model = resnet.resnet56_cifar(num_classes=10)
 
-    state_dict = torch.load("CIFAR10_BN.pt", map_location=device)
+    # state_dict = torch.load("CIFAR10_BN.pt", map_location=device)
+    state_dict = torch.load("CIFAR10_BN_Aug_RES.pt", map_location=device)
 
-    oModel = modelNeuroSIM.NeuroSIM_BN_Model()
+    # oModel = modelNeuroSIM.NeuroSIM_BN_Model()
+    oModel = resnet.resnet56_cifar(num_classes=10)
     # state_dict = oModel.state_dict()
     oModel.load_state_dict(state_dict)
     oModel.to(device)
@@ -63,21 +69,26 @@ if __name__ == "__main__":
 
     noise = (0,0.25)
     pOutput = []
-    nRuns = 10000
+    nRuns = args.nRuns
     import tqdm
-    # for _ in tqdm.tqdm(range(nRuns)):
+    # for runTime in tqdm.tqdm(range(nRuns)):
     for runTime in range(nRuns):
-        logInterval = 100
-        if runTime % logInterval == logInterval - 1:
-            logFile = open("logFile","a+")
-            logFile.write(str(runTime)+"\n")
-            logFile.close()
-        pModel = modelNeuroSIM.NeuroSIM_BN_Model()
+        # logInterval = 100
+        # if runTime % logInterval == logInterval - 1:
+        #     logFile = open("logFile","a+")
+        #     logFile.write(str(runTime)+"\n")
+        #     logFile.close()
+
+
+
+        # pModel = modelNeuroSIM.NeuroSIM_BN_Model()
+        pModel = resnet.resnet56_cifar(num_classes=10)
         pModel.load_state_dict(state_dict)
         pState = pModel.state_dict()
         for noise_index, key in enumerate(state_dict.keys()):
             # print(key)
-            if key.find("conv.weight") != -1:
+            # if key.find("conv.weight") != -1:
+            if key.find("weight") != -1 and key.find("bn") == -1:
                 size = state_dict[key].size()
                 mean, std = noise
                 std = pState[key].data.max() /16
@@ -105,12 +116,13 @@ if __name__ == "__main__":
         for i in range(len(pOutput)):
             shoot.append(pOutput[i][0][j] - GT[0][j])
         import numpy as np
-        print(np.std(shoot))
+        # print(np.std(shoot))
         if flag and np.std(shoot) > 1e-4:
-            plt.hist(shoot,30)
+            # plt.hist(shoot,30)
             # plt.savefig(f"fig{j}")
-            plt.show()
+            # plt.show()
             flag = False
-        f = open(f"Conv_list{j}","wb+")
-        pickle.dump(shoot,f)
+        # f = open(f"Res_Conv_list{j}","wb+")
+        # pickle.dump(shoot,f)
+        torch.save(shoot, f"Res_Conv_list{j}")
    

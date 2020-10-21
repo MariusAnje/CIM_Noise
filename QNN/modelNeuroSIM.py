@@ -66,7 +66,7 @@ class NeuroSIM_BN_Model(nn.Module):
             nn.ReLU(),
             QLinear(N, 5, 1024, 10)
         )
-        self.init_model()
+        # self.init_model()
     
     def init_model(self, model_init='he_fout', init_div_groups=False):
         for m in self.modules():

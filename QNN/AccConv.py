@@ -10,6 +10,8 @@ from matplotlib import pyplot as plt
 import pickle
 import tqdm
 import modelNeuroSIM
+import resnet
+import time
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -19,50 +21,67 @@ if __name__ == "__main__":
             help='input the batch size used in training and inference')
     parser.add_argument('--nruns', action='store', type=int, default=100,
             help='number of runs for test')
+    parser.add_argument('--model', action='store', type=str, default='NS', choices=['NS', 'RES'],
+            help='which model to use')
     args = parser.parse_args()
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
     BS = args.batch_size
+    normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
+#     normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 
     transform = transforms.Compose(
     [transforms.ToTensor(),
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+     normalize])
     # trainset = torchvision.datasets.CIFAR10(root='~/Private/data', train=True, download=True, transform=transform)
     # trainloader = torch.utils.data.DataLoader(trainset, batch_size=BS, shuffle=True, num_workers=4)
     testset = torchvision.datasets.CIFAR10(root='~/Private/data', train=False, download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=BS, shuffle=False, num_workers=4)
+    
+    if args.model == "NS":
+        model = modelNeuroSIM.NeuroSIM_BN_Model()
+    elif args.model == "RES":
+        model = resnet.resnet56_cifar(num_classes=10)
 
     model = modelNeuroSIM.NeuroSIM_BN_Model()
 
-    state_dict = torch.load("CIFAR10_BN.pt", map_location=device)
+    state_dict = torch.load(f"CIFAR10_BN_Aug_{args.model}.pt", map_location=device)
 
-    # oModel = modelNeuroSIM.NeuroSIM_BN_Model()
-    # oModel.load_state_dict(state_dict)
-    # oModel.to(device)
-    # oModel.eval()
-    # correct = 0
-    # total   = 0
-    # for data in tqdm.tqdm(testloader):
-    # # for data in testloader:
-    #     images, labels = data
-    #     images, labels = images.to(device), labels.to(device)
-    #     outputs = oModel(images)
-    #     _, predicted = torch.max(outputs.data, 1)
-    #     correct += (predicted == labels).sum()
-    #     total   += len(predicted)
+    if args.model == "NS":
+        oModel = modelNeuroSIM.NeuroSIM_BN_Model()
+    elif args.model == "RES":
+        oModel = resnet.resnet56_cifar(num_classes=10)
+
+    oModel.load_state_dict(state_dict)
+    oModel.to(device)
+    oModel.eval()
+    correct = 0
+    total   = 0
+#     for data in tqdm.tqdm(testloader):
+    for data in testloader:
+        images, labels = data
+        images, labels = images.to(device), labels.to(device)
+        outputs = oModel(images)
+        _, predicted = torch.max(outputs.data, 1)
+        correct += (predicted == labels).sum()
+        total   += len(predicted)
     
-    # oAcc = correct*1./total
-    # print(f"{correct}/{total} = {correct*1./total:.4f}")
+    oAcc = correct*1./total
+    print(f"{correct}/{total} = {correct*1./total:.4f}")
 
 
-    noise = (0,1e-2)
+    noise = (0,5e-2)
     pOutput = []
     nRuns = args.nruns
     pAcc = []
     import tqdm
-    for _ in tqdm.tqdm(range(nRuns)):
-    # for _ in range(nRuns):
-        pModel = modelNeuroSIM.NeuroSIM_BN_Model()
+#     for _ in tqdm.tqdm(range(nRuns)):
+    for _ in range(nRuns):
+        if args.model == "NS":
+            pModel = modelNeuroSIM.NeuroSIM_BN_Model()
+        elif args.model == "RES":
+            pModel = resnet.resnet56_cifar(num_classes=10)
+
         pModel.load_state_dict(state_dict)
         pState = pModel.state_dict()
         for noise_index, key in enumerate(state_dict.keys()):
@@ -86,5 +105,7 @@ if __name__ == "__main__":
                 _, predicted = torch.max(outputs.data, 1)
                 correct += (predicted == labels).sum()
                 total   += len(predicted)
-            pAcc.append((correct).detach().cpu().numpy())
-    print(pAcc)
+            pAcc.append((correct).detach().cpu().item())
+    if args.nruns < 100:
+        print(pAcc)
+    torch.save(pAcc, f"acc_vari_{args.model}_{int(oAcc*10000)}_{time.time()}")
