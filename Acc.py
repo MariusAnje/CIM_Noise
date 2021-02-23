@@ -153,7 +153,7 @@ if __name__ == "__main__":
 
     noise = (0,5e-2)
     pOutput = []
-    nRuns = 10
+    nRuns = 10000
     acc = []
     import tqdm
     for _ in tqdm.tqdm(range(nRuns)):
@@ -190,5 +190,5 @@ if __name__ == "__main__":
     # plt.show()
     # f = open(f"acc9874","wb+")
     # pickle.dump(acc,f)
-    torch.save(acc, f"acc_{acc_filename}_{nRuns}")
+    torch.save(acc, f"acc_{acc_filename}_{noise[1]}_{nRuns}")
    

@@ -4,6 +4,7 @@ import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torch.backends.cudnn as cudnn
 import argparse
 # tqdm is imported for better visualization
 import tqdm
@@ -17,7 +18,7 @@ def train(numEpoch, device):
     net.train()
     best_Acc = 0.0
     for epoch in range(numEpoch):  # loop over the dataset multiple times
-
+        
         running_loss = 0.0
         with tqdm.tqdm(trainloader, leave = False) as loader:
             for i, data in enumerate(loader, 0):
@@ -38,6 +39,7 @@ def train(numEpoch, device):
                 # print statistics
                 running_loss += loss.item()
                 loader.set_description(f"{running_loss/(i+1):.4f}")
+        lr_scheduler.step()
         acc = test(device)
         print(f"Epoch {epoch}: test accuracy: {acc:.4f}")
         if acc > best_Acc:
@@ -68,11 +70,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', action='store', default='cuda:0',
             help='input the device you want to use')
-    parser.add_argument('--batch_size', action='store', type=int, default=256,
+    parser.add_argument('--batch_size', action='store', type=int, default=128,
             help='input the batch size used in training and inference')
-    parser.add_argument('--nruns', action='store', type=int, default=100,
+    parser.add_argument('--nruns', action='store', type=int, default=200,
             help='number of runs for test')
-    parser.add_argument('--model', action='store', type=str, default='NS', choices=['NS', 'RES'],
+    parser.add_argument('--model', action='store', type=str, default='NS', choices=['NS', 'RES', '110'],
             help='which model to use')
     args = parser.parse_args()
     
@@ -82,6 +84,8 @@ if __name__ == "__main__":
     # Hyper parameters for training offline and inference online
     batchSize = args.batch_size
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
+    if args.device != "cpu":
+        cudnn.benchmark = True
 
     # dataset extracting and data preprocessing
     normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616))
@@ -90,8 +94,8 @@ if __name__ == "__main__":
     #  transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         normalize])
     train_transform = transforms.Compose([
-            transforms.RandomAffine(10, translate=(0.07, 0.07)),
             transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop(32, 4),
             transforms.ToTensor(),
             normalize,
             ])
@@ -105,6 +109,8 @@ if __name__ == "__main__":
         net = modelNeuroSIM.NeuroSIM_BN_Model()
     elif args.model == 'RES':
         net = resnet.resnet56_cifar(num_classes=10)
+    elif args.model == '110':
+        net = resnet.resnet110_cifar(num_classes=10)
     net.to(device)
 
     if offline:
@@ -112,8 +118,9 @@ if __name__ == "__main__":
         
         # loss function and optimizer
         criterion = nn.CrossEntropyLoss()
-        # optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=0.9)
-        optimizer = optim.Adam(net.parameters(), lr=1e-3)
+        optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150])
+        # optimizer = optim.Adam(net.parameters(), lr=1e-3)
 
         # Training
         train(args.nruns, device)

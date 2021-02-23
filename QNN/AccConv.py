@@ -12,6 +12,7 @@ import tqdm
 import modelNeuroSIM
 import resnet
 import time
+import resCIFAR
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -21,7 +22,7 @@ if __name__ == "__main__":
             help='input the batch size used in training and inference')
     parser.add_argument('--nruns', action='store', type=int, default=100,
             help='number of runs for test')
-    parser.add_argument('--model', action='store', type=str, default='NS', choices=['NS', 'RES'],
+    parser.add_argument('--model', action='store', type=str, default='NS', choices=['NS', 'RES', '110'],
             help='which model to use')
     args = parser.parse_args()
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
@@ -38,19 +39,25 @@ if __name__ == "__main__":
     testset = torchvision.datasets.CIFAR10(root='~/Private/data', train=False, download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=BS, shuffle=False, num_workers=4)
     
-    if args.model == "NS":
-        model = modelNeuroSIM.NeuroSIM_BN_Model()
-    elif args.model == "RES":
-        model = resnet.resnet56_cifar(num_classes=10)
+    # if args.model == "NS":
+    #     model = modelNeuroSIM.NeuroSIM_BN_Model()
+    # elif args.model == "RES":
+    #     model = resnet.resnet56_cifar(num_classes=10)
 
-    model = modelNeuroSIM.NeuroSIM_BN_Model()
+    # model = modelNeuroSIM.NeuroSIM_BN_Model()
 
-    state_dict = torch.load(f"CIFAR10_BN_Aug_{args.model}.pt", map_location=device)
+    # state_dict = torch.load(f"CIFAR10_BN_Aug_{args.model}.pt", map_location=device)
+    
+    state_dict = torch.load(f"resnet110-1d1ed7c2.th", map_location=device)
+    state_dict = state_dict["state_dict"]
+    state_dict = {k[7:]: v for k, v in state_dict.items()}
 
     if args.model == "NS":
         oModel = modelNeuroSIM.NeuroSIM_BN_Model()
     elif args.model == "RES":
         oModel = resnet.resnet56_cifar(num_classes=10)
+    elif args.model == "110":
+        oModel = resCIFAR.resnet110()
 
     oModel.load_state_dict(state_dict)
     oModel.to(device)
@@ -70,17 +77,19 @@ if __name__ == "__main__":
     print(f"{correct}/{total} = {correct*1./total:.4f}")
 
 
-    noise = (0,5e-2)
+    noise = (0,2e-2)
     pOutput = []
     nRuns = args.nruns
     pAcc = []
     import tqdm
-#     for _ in tqdm.tqdm(range(nRuns)):
+    # for _ in tqdm.tqdm(range(nRuns)):
     for _ in range(nRuns):
         if args.model == "NS":
             pModel = modelNeuroSIM.NeuroSIM_BN_Model()
         elif args.model == "RES":
             pModel = resnet.resnet56_cifar(num_classes=10)
+        elif args.model == "110":
+            pModel = resCIFAR.resnet110()
 
         pModel.load_state_dict(state_dict)
         pState = pModel.state_dict()
@@ -106,6 +115,7 @@ if __name__ == "__main__":
                 correct += (predicted == labels).sum()
                 total   += len(predicted)
             pAcc.append((correct).detach().cpu().item())
-    if args.nruns < 100:
+    if args.nruns <= 100:
         print(pAcc)
+    plt.hist(pAcc)
     torch.save(pAcc, f"acc_vari_{args.model}_{int(oAcc*10000)}_{time.time()}")

@@ -63,11 +63,12 @@ if __name__ == "__main__":
 
     testset = torchvision.datasets.MNIST(root='./data', train=False,
                                         download=True, transform=transforms.ToTensor())
-    testloader = torch.utils.data.DataLoader(testset, batch_size=1,
+    testloader = torch.utils.data.DataLoader(testset, batch_size=1024,
                                             shuffle=False, num_workers=8)
 
     model = Net()
 
+    """
     import torch.optim as optim
 
     criterion = nn.CrossEntropyLoss()
@@ -76,7 +77,7 @@ if __name__ == "__main__":
 
     model.to(device)
 
-    for epoch in range(20):  # loop over the dataset multiple times
+    for epoch in range(10):  # loop over the dataset multiple times
 
         running_loss = 0.0
         loader = tqdm.tqdm(trainloader)
@@ -108,9 +109,9 @@ if __name__ == "__main__":
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    print('Accuracy of the network on the 10000 test images: %.2f %%' % (
+    print('Accuracy of the network on the 10000 test images: %d %%' % (
         100 * correct / total))
-    torch.save(model.state_dict(), f"GCONV_state_dict_{correct}.pt")
+    torch.save(model.state_dict(), "GCONV_state_dict.pt")
     exit(0)
     nData = 1
     dataset  = []
@@ -124,6 +125,7 @@ if __name__ == "__main__":
         theInput  = theInput.to(device)
         theOutput = model(theInput)
         GT.append(theOutput)
+    """
 
     state_dict = torch.load("GCONV_state_dict.pt", map_location=device)
 
@@ -131,6 +133,8 @@ if __name__ == "__main__":
     # state_dict = oModel.state_dict()
     oModel.load_state_dict(state_dict)
     oModel.to(device)
+    correct = 0
+    total   = 0
     for data in testloader:
         images, labels = data
         images, labels = images.to(device), labels.to(device)
@@ -140,19 +144,20 @@ if __name__ == "__main__":
         # images = torch.normal(mean,std)
         outputs = oModel(images)
         _, predicted = torch.max(outputs.data, 1)
-        GT = outputs.detach().cpu().numpy()
-        break
+        correct += (predicted == labels).sum()
+        total   += len(predicted)
     
-    print(GT)
-    # exit(0)
+    acc_filename = correct
+    print(f"{correct}/{total} = {correct*1./total:.4f}")
 
 
-    noise = (0,1e-2)
+    noise = (0,5e-2)
     pOutput = []
-    nRuns = 100000
+    nRuns = 1000
+    acc = []
     import tqdm
-    # for _ in tqdm.tqdm(range(nRuns)):
-    for _ in range(nRuns):
+    for _ in tqdm.tqdm(range(nRuns)):
+    # for _ in range(nRuns):
         pModel = Net()
         pModel.load_state_dict(state_dict)
         pState = pModel.state_dict()
@@ -160,34 +165,30 @@ if __name__ == "__main__":
             if key.find("weight") != -1:
                 size = state_dict[key].size()
                 mean, std = noise
-                sampled_noise = torch.randn(size) * std + mean
+                sampled_noise = torch.randn(size).sign() * std * 2 + mean
                 pState[key] = pState[key].data + sampled_noise
         pModel.load_state_dict(pState)
         pModel.to(device)
         
+        correct = 0
+        total   = 0
         with torch.no_grad():
             for data in testloader:
-                # images, labels = data
-                # images, labels = images.to(device), labels.to(device)
+                images, labels = data
+                images, labels = images.to(device), labels.to(device)
                 # images = images.view(-1,784)
                 outputs = pModel(images)
                 _, predicted = torch.max(outputs.data, 1)
-                pOutput.append(outputs.detach().cpu().numpy())
-                break
+                correct += (predicted == labels).sum()
+                total   += len(predicted)
+            acc.append((correct).detach().cpu().numpy())
     
     
 
-    
-    for j in range(10):
-        shoot = []
-        for i in range(len(pOutput)):
-            shoot.append(pOutput[i][0][j] - GT[0][j])
-        import numpy as np
-        print(np.std(shoot))
-        if j == 0:
-            plt.hist(shoot,30)
-            # plt.savefig(f"fig{j}")
-            plt.show()
-        f = open(f"Conv_list{j}","wb+")
-        pickle.dump(shoot,f)
+    # plt.hist(acc,30)
+    # plt.savefig(f"fig{j}")
+    # plt.show()
+    # f = open(f"acc9874","wb+")
+    # pickle.dump(acc,f)
+    torch.save(acc, f"border_acc_{acc_filename}_{nRuns}")
    
