@@ -10,6 +10,8 @@
 
 module load python
 
-# python -u GConv.py 
-python -u train.py
-
+# python -u GConv.py --device cpu --nRuns 10000
+# python -u train.py
+# python AccConv.py --model NS --nruns 10000
+# python AccConv.py --model RES --nruns 10000
+python AccConv.py --model 110 --nruns 10000
