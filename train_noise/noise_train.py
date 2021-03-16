@@ -26,10 +26,14 @@ if __name__ == "__main__":
             help='input the batch size')
     parser.add_argument('--fname_head', action='store', default="GCONV_state_dict",
             help='input the filename')
-    parser.add_argument('--method', action='store', choices = ["normal", "noise", "adv"], default="adv", 
+    parser.add_argument('--method', action='store', choices = ["normal", "noise", "adv", "comb"], default="adv", 
             help='input the training method')
     parser.add_argument('--epochs', action='store', type=int, default=5, 
             help='input the number of epochs for training')
+    parser.add_argument('--first', action='store', type=int, default=5, 
+            help='input the number of first runs for whole training')
+    parser.add_argument('--adv_ep', action='store', type=int, default=3, 
+            help='input the number of adversarial epochs per iteration')
     parser.add_argument('--adv_num', action='store', type=int, default=10000, 
             help='input the number of samples for adv train')
     parser.add_argument('--test_run', action='store', type=int, default=10, 
@@ -56,21 +60,25 @@ if __name__ == "__main__":
 
     criterion = nn.CrossEntropyLoss()
     # optimizer = optim.Adam(model.parameters(), lr=0.001)
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, 10, 0.1)
+    optimizer_normal = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9)
+    optimizer_noise = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    scheduler = optim.lr_scheduler.StepLR(optimizer_noise, 100 * len(trainloader), 0.1)
     adv_set = AdvDataset(trainset)
     mean, std = 0, 0.1
 
     model.to(device)
     model.clear_noise()
     print(f"method {args.method}")
+    print(args)
     start_time = time.time()
     if args.method == "normal":
-        train(args.epochs, model, trainloader, device, optimizer, criterion, scheduler, testloader, f"{fname_head}_tmp_best.pt")
+        train(args.epochs, model, trainloader, device, optimizer_noise, criterion, scheduler, testloader, f"{fname_head}_tmp_best.pt")
     elif args.method == "noise":
-        train_noise(args.epochs, mean, std, model, trainloader, device, optimizer, criterion, scheduler, testloader, f"{fname_head}_tmp_best.pt")
+        train_noise(args.epochs, mean, std, model, trainloader, device, optimizer_noise, criterion, scheduler, testloader, f"{fname_head}_tmp_best.pt")
     elif args.method == "adv":
-        train_adv(args.epochs, mean, std, BS, 0.1, args.adv_num, model, adv_set, device, optimizer, criterion, scheduler, testloader, f"{fname_head}_tmp_best.pt")
+        train_adv(args.epochs,  args.first, args.adv_ep, mean, std, BS, 0.1, args.adv_num, model, adv_set, device, optimizer_normal, optimizer_noise, criterion, scheduler, testloader, trainloader, f"{fname_head}_tmp_best.pt")
+    elif args.method == "comb":
+        train_comb(args.epochs, args.first, args.adv_ep, mean, std, BS, 0.1, args.adv_num, model, adv_set, device, optimizer_normal, optimizer_noise, criterion, scheduler, testloader, trainloader, f"{fname_head}_tmp_best.pt")
     else:
         raise Exception("Not implemented")
     

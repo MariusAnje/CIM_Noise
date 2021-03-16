@@ -44,12 +44,45 @@ class AdvDataset():
     
     def sample(self, num, BS):
         T = np.where(self.sens_table)[0]
+        if len(T) == 0:
+            return []
         if num < len(T):
             T = np.random.choice(T, num, replace=False)
         subset = torch.utils.data.Subset(self.total_set, T)
         subloader = torch.utils.data.DataLoader(subset, batch_size=BS,
                                         shuffle=True, num_workers=2)
-        return subloader
+        return subloader, len(T)
+    
+    def dual_draw(self, num, BS):
+        S = np.where(self.sens_table)[0]
+        R = np.where(self.sens_table == 0)[0]
+        half = num // 2
+        if half < len(S):
+            S = np.random.choice(S, half, replace=False)
+        if half < len(R):
+            R = np.random.choice(R, half, replace=False)
+        T = np.concatenate([R,S])
+        subset = torch.utils.data.Subset(self.total_set, T)
+        subloader = torch.utils.data.DataLoader(subset, batch_size=BS,
+                                        shuffle=True, num_workers=2)
+        return subloader, len(T)
+    
+    def ballance_draw(self, num, BS):
+        S = np.where(self.sens_table)[0]
+        R = np.where(self.sens_table == 0)[0]
+        ratio = num / len(self.sens_table)
+        S_num = int(len(S) * ratio)
+        R_num = int(len(R) * ratio)
+
+        if S_num != 0:
+            S = np.random.choice(S, S_num, replace=False)
+        if R_num < len(R):
+            R = np.random.choice(R, R_num, replace=False)
+        T = np.concatenate([R,S])
+        subset = torch.utils.data.Subset(self.total_set, T)
+        subloader = torch.utils.data.DataLoader(subset, batch_size=BS,
+                                        shuffle=True, num_workers=2)
+        return subloader, len(T)
     
     def whole_set(self, BS):
         T = list(range(len(self.total_set)))
