@@ -38,6 +38,8 @@ if __name__ == "__main__":
             help='input the number of samples for adv train')
     parser.add_argument('--test_run', action='store', type=int, default=10, 
             help='input the number of runs for noisy test')
+    parser.add_argument('--eta', action='store', type=float, default=0.1, 
+            help='eta for adv dataset')
     args = parser.parse_args()
 
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
@@ -65,6 +67,7 @@ if __name__ == "__main__":
     scheduler = optim.lr_scheduler.StepLR(optimizer_noise, 100 * len(trainloader), 0.1)
     adv_set = AdvDataset(trainset)
     mean, std = 0, 0.1
+    eta = args.eta
 
     model.to(device)
     model.clear_noise()
@@ -74,11 +77,11 @@ if __name__ == "__main__":
     if args.method == "normal":
         train(args.epochs, model, trainloader, device, optimizer_noise, criterion, scheduler, testloader, f"{fname_head}_tmp_best.pt")
     elif args.method == "noise":
-        train_noise(args.epochs, mean, std, model, trainloader, device, optimizer_noise, criterion, scheduler, testloader, f"{fname_head}_tmp_best.pt")
+        train_noise(args.epochs, mean, std, model, adv_set, BS, device, optimizer_noise, criterion, scheduler, testloader, f"{fname_head}_tmp_best.pt")
     elif args.method == "adv":
-        train_adv(args.epochs,  args.first, args.adv_ep, mean, std, BS, 0.1, args.adv_num, model, adv_set, device, optimizer_normal, optimizer_noise, criterion, scheduler, testloader, trainloader, f"{fname_head}_tmp_best.pt")
+        train_adv(args.epochs,  args.first, args.adv_ep, mean, std, BS, eta, args.adv_num, model, adv_set, device, optimizer_normal, optimizer_noise, criterion, scheduler, testloader, trainloader, f"{fname_head}_tmp_best.pt")
     elif args.method == "comb":
-        train_comb(args.epochs, args.first, args.adv_ep, mean, std, BS, 0.1, args.adv_num, model, adv_set, device, optimizer_normal, optimizer_noise, criterion, scheduler, testloader, trainloader, f"{fname_head}_tmp_best.pt")
+        train_comb(args.epochs, args.first, args.adv_ep, mean, std, BS, eta, args.adv_num, model, adv_set, device, optimizer_normal, optimizer_noise, criterion, scheduler, testloader, trainloader, f"{fname_head}_tmp_best.pt")
     else:
         raise Exception("Not implemented")
     

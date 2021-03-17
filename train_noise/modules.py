@@ -45,13 +45,13 @@ class AdvDataset():
     def sample(self, num, BS):
         T = np.where(self.sens_table)[0]
         if len(T) == 0:
-            return []
+            return [], T
         if num < len(T):
             T = np.random.choice(T, num, replace=False)
         subset = torch.utils.data.Subset(self.total_set, T)
         subloader = torch.utils.data.DataLoader(subset, batch_size=BS,
                                         shuffle=True, num_workers=2)
-        return subloader, len(T)
+        return subloader, T
     
     def dual_draw(self, num, BS):
         S = np.where(self.sens_table)[0]
@@ -65,7 +65,7 @@ class AdvDataset():
         subset = torch.utils.data.Subset(self.total_set, T)
         subloader = torch.utils.data.DataLoader(subset, batch_size=BS,
                                         shuffle=True, num_workers=2)
-        return subloader, len(T)
+        return subloader, T
     
     def ballance_draw(self, num, BS):
         S = np.where(self.sens_table)[0]
@@ -82,7 +82,7 @@ class AdvDataset():
         subset = torch.utils.data.Subset(self.total_set, T)
         subloader = torch.utils.data.DataLoader(subset, batch_size=BS,
                                         shuffle=True, num_workers=2)
-        return subloader, len(T)
+        return subloader, T
     
     def whole_set(self, BS):
         T = list(range(len(self.total_set)))

@@ -73,115 +73,49 @@ def test_noise_average(mean, std, model, testloader, device):
     model.clear_noise()
     return correct, total
 
-
-def train_noise_one_epoch(mean, std, model, trainloader, device, optimizer, criterion, scheduler, testloader):
+def train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer, criterion, scheduler, testloader, update, noise):
     model.train()
+    # loader = tqdm(trainloader, leave=False)
     loader = trainloader
-    for _, data in enumerate(loader, 0):
-        model.set_noise(mean, std)
+    for i, data in enumerate(loader, 0):
+        if noise:
+            model.set_noise(mean, std)
+        else:
+            model.clear_noise()
         inputs, labels = data
         inputs, labels = inputs.to(device), labels.to(device)
+        inputs.requires_grad_()
 
         optimizer.zero_grad()
-
         outputs = model(inputs)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
         scheduler.step()
+        
+        if update:
+            with torch.no_grad():
+                outputs = model(inputs + eta * inputs.grad.data.sign())
+                _, predicted = torch.max(outputs.data, 1)
+                index_slice = index[i*BS: (i+1) * BS]
+                adv_set.sens_table[index_slice] =  (predicted != labels).cpu()
+
     model.clear_noise()
     correct, _ = test_noise_average(mean, std, model, testloader, device)
-    print(correct)
-    return correct
+    num_sample = len(index)
+    return correct, num_sample
 
-def train_noise(epochs, mean, std, model, trainloader, device, optimizer, criterion, scheduler, testloader, fname):
+def train_noise(epochs, mean, std, model, adv_set, BS, device, optimizer, criterion, scheduler, testloader, fname):
     best_correct = 0
-    for epoch in range(epochs):  # loop over the dataset multiple times
-        model.train()
-        correct = train_noise_one_epoch(mean, std, model, trainloader, device, optimizer, criterion, scheduler, testloader)
+    for epoch in range(epochs):
+        trainloader, index = adv_set.whole_set(BS)
+        correct, num_adv = train_all_one_epoch(mean, std, 0, model, adv_set, BS, trainloader, index, device, optimizer, criterion, scheduler, testloader, update=False, noise=True)
+        num_adv = adv_set.sens_table.sum()
         if correct > best_correct:
             best_correct = correct
             # torch.save(model.state_dict(), fname + str(epoch))
             torch.save(model.state_dict(), fname)
-
-def test_adv_one_epoch(mean, std, BS, eta, model, adv_set, device, optimizer, criterion, scheduler, testloader):
-    model.train()
-    data_loader, index = adv_set.whole_set(BS)
-    # loader = tqdm(data_loader, leave=False)
-    loader = data_loader
-    for i, data in enumerate(loader, 0):
-        model.clear_noise()
-        inputs, labels = data
-        inputs, labels = inputs.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        
-        with torch.no_grad():
-            outputs = model(inputs + eta * inputs)
-            _, predicted = torch.max(outputs.data, 1)
-            index_slice = index[i*BS: (i+1) * BS]
-            adv_set.sens_table[index_slice] =  (predicted != labels).cpu()
-        
-    correct, _ = test(model, testloader, device)
-    correct = 0
-    return correct
-
-
-def train_adv_one_epoch(mean, std, BS, eta, model, adv_set, device, optimizer, criterion, scheduler, testloader):
-    model.train()
-    data_loader, index = adv_set.whole_set(BS)
-    # loader = tqdm(data_loader, leave=False)
-    loader = data_loader
-    for i, data in enumerate(loader, 0):
-        # model.set_noise(mean, std)
-        model.clear_noise()
-        inputs, labels = data
-        inputs, labels = inputs.to(device), labels.to(device)
-
-        # optimizer.zero_grad()
-
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        # optimizer.step()
-        
-        with torch.no_grad():
-            outputs = model(inputs + eta * inputs)
-            _, predicted = torch.max(outputs.data, 1)
-            index_slice = index[i*BS: (i+1) * BS]
-            adv_set.sens_table[index_slice] =  (predicted != labels).cpu()
-
-    model.clear_noise()
-    correct, _ = test_noise_average(mean, std, model, testloader, device)
-    num_adv = adv_set.sens_table.sum()
-    return correct, num_adv
-
-def train_adv_sens_set(mean, std, BS, num, model, adv_set, device, optimizer, criterion, scheduler, testloader):
-    model.train()
-    running_loss = 0.0
-    # loader = tqdm(adv_set.sample(num, BS), leave=False)
-    # loader, num_sample = adv_set.sample(num, BS)
-    loader, num_sample = adv_set.dual_draw(num, BS)
-    for _, data in enumerate(loader, 0):
-        model.set_noise(mean, std)
-        inputs, labels = data
-        inputs, labels = inputs.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        scheduler.step()
-    model.clear_noise()
-    correct, _ = test_noise_average(mean, std, model, testloader, device)
-    # correct, _ = test(model, testloader, device)
-    return correct, num_sample
+        print(f"noise: {correct}, num_adv: {num_adv}")
 
 def train_adv(epochs, first, adv_ep, mean, std, BS, eta, num, model, adv_set, device, optimizer, optimizer_adv, criterion, scheduler, testloader, trainloader, fname):
     """
@@ -191,79 +125,29 @@ def train_adv(epochs, first, adv_ep, mean, std, BS, eta, num, model, adv_set, de
     """
     best_correct = 0
     for _ in range(min(first, epochs)):
-        # correct, num_adv = train_adv_one_epoch(mean, std, BS, eta, model, adv_set, device, optimizer, criterion, scheduler, testloader)
-        correct, num_adv = train_comb_one_epoch(mean, std, BS, eta, model, adv_set, device, optimizer_adv, criterion, scheduler, testloader)
+        trainloader, index = adv_set.whole_set(BS)
+        correct, num_adv = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
+        num_adv = adv_set.sens_table.sum()
         if correct > best_correct:
             best_correct = correct
             torch.save(model.state_dict(), fname)
-        scheduler.step()
         print(f"noise: {correct}, num_adv: {num_adv}")
     for _ in range(first, epochs, adv_ep+1):
-        correct, num_adv = train_adv_one_epoch(mean, std, BS, eta, model, adv_set, device, optimizer, criterion, scheduler, testloader)
+        trainloader, index = adv_set.whole_set(BS)
+        correct, num_adv = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
+        num_adv = adv_set.sens_table.sum()
         if correct > best_correct:
             best_correct = correct
             torch.save(model.state_dict(), fname)
-        print(f"normal: {correct}, num_adv: {num_adv}")
+        print(f"noise: {correct}, num_adv: {num_adv}")
         for _ in range(adv_ep):
-            correct_adv, num_sample = train_adv_sens_set(mean, std, BS, num, model, adv_set, device, optimizer_adv, criterion, scheduler, testloader)
+            trainloader, index = adv_set.dual_draw(num, BS)
+            correct_adv, num_sample = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=False, noise=True)
             if correct_adv > best_correct:
                 best_correct = correct_adv
                 torch.save(model.state_dict(), fname)
             print(f"adv: {correct_adv}, num_sample: {num_sample}")
             
-            scheduler.step()
-
-def train_comb_one_epoch(mean, std, BS, eta, model, adv_set, device, optimizer, criterion, scheduler, testloader):
-    model.train()
-    data_loader, index = adv_set.whole_set(BS)
-    # loader = tqdm(data_loader, leave=False)
-    loader = data_loader
-    for i, data in enumerate(loader, 0):
-        model.set_noise(mean, std)
-        inputs, labels = data
-        inputs, labels = inputs.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        scheduler.step()
-        
-        with torch.no_grad():
-            outputs = model(inputs + eta * inputs)
-            _, predicted = torch.max(outputs.data, 1)
-            index_slice = index[i*BS: (i+1) * BS]
-            adv_set.sens_table[index_slice] =  (predicted != labels).cpu()
-
-    model.clear_noise()
-    correct, _ = test_noise_average(mean, std, model, testloader, device)
-    num_adv = adv_set.sens_table.sum()
-    return correct, num_adv
-
-def train_comb_sens_set(mean, std, BS, num, model, adv_set, device, optimizer, criterion, scheduler, testloader):
-    model.train()
-    running_loss = 0.0
-    # loader = tqdm(adv_set.sample(num, BS), leave=False)
-    # loader = adv_set.sample(num, BS)
-    loader = adv_set.dual_draw(num, BS)
-    # loader = adv_set.whole_set(BS)[0]
-    for _, data in enumerate(loader, 0):
-        model.set_noise(mean, std)
-        inputs, labels = data
-        inputs, labels = inputs.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-    model.clear_noise()
-    correct, _ = test_noise_average(mean, std, model, testloader, device)
-    return correct
-
 def train_comb(epochs, first, adv_ep, mean, std, BS, eta, num, model, adv_set, device, optimizer, optimizer_adv, criterion, scheduler, testloader, trainloader, fname):
     """
     epochs: number of total epochs
@@ -272,20 +156,25 @@ def train_comb(epochs, first, adv_ep, mean, std, BS, eta, num, model, adv_set, d
     """
     best_correct = 0
     for _ in range(min(first, epochs)):
-        correct = train_comb_one_epoch(mean, std, BS, eta, model, adv_set, device, optimizer, criterion, scheduler, testloader)
+        trainloader, index = adv_set.whole_set(BS)
+        correct, num_adv = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
+        num_adv = adv_set.sens_table.sum()
         if correct > best_correct:
             best_correct = correct
             torch.save(model.state_dict(), fname)
-        scheduler.step()
-        print(f"normal: {correct}")
+        print(f"noise: {correct}, num_adv: {num_adv}")
     for _ in range(first, epochs, adv_ep+1):
-        for _ in range(adv_ep):
-            correct_adv = train_comb_sens_set(mean, std, BS, num, model, adv_set, device, optimizer, criterion, scheduler, testloader)
-            print(f"adv: {correct_adv}")
-        correct = train_comb_one_epoch(mean, std, BS, eta, model, adv_set, device, optimizer, criterion, scheduler, testloader)
-
+        trainloader, index = adv_set.whole_set(BS)
+        correct, num_adv = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
+        num_adv = adv_set.sens_table.sum()
         if correct > best_correct:
             best_correct = correct
             torch.save(model.state_dict(), fname)
-        print(f"normal: {correct}")
-        scheduler.step()
+        print(f"noise: {correct}, num_adv: {num_adv}")
+        for _ in range(adv_ep):
+            trainloader, index = adv_set.sample(num, BS)
+            correct_adv, num_sample = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=False, noise=True)
+            if correct_adv > best_correct:
+                best_correct = correct_adv
+                torch.save(model.state_dict(), fname)
+            print(f"adv: {correct_adv}, num_sample: {num_sample}")
