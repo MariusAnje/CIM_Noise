@@ -126,7 +126,7 @@ def train_adv(epochs, first, adv_ep, mean, std, BS, eta, num, model, adv_set, de
     best_correct = 0
     for _ in range(min(first, epochs)):
         trainloader, index = adv_set.whole_set(BS)
-        correct, num_adv = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
+        correct, _ = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
         num_adv = adv_set.sens_table.sum()
         if correct > best_correct:
             best_correct = correct
@@ -134,7 +134,10 @@ def train_adv(epochs, first, adv_ep, mean, std, BS, eta, num, model, adv_set, de
         print(f"noise: {correct}, num_adv: {num_adv}")
     for _ in range(first, epochs, adv_ep+1):
         trainloader, index = adv_set.whole_set(BS)
-        correct, num_adv = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
+        if num_adv >= len(adv_set.sens_table) // 6:
+            correct, _ = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
+        else:
+            correct, _ = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=False, noise=True)
         num_adv = adv_set.sens_table.sum()
         if correct > best_correct:
             best_correct = correct
