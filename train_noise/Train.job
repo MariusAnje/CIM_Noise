@@ -12,6 +12,7 @@
 module load python
 
 # python noise_train.py --device cuda:0 --epochs 100 --adv_num 10000 --test_run 1000 --method normal
-python noise_train.py --device cuda:0 --test_run 5 --method adv --first 5 --epochs 300 --eta 0.15 --BS 128 --adv_ep 20 --adv_num 60000
-# python noise_train.py --device cuda:0 --epochs 300 --adv_num 10000 --test_run 1000 --method noise
+# python noise_train.py --device cuda:0 --test_run 5 --method adv --first 20 --epochs 300 --eta 0.05 --BS 128 --adv_ep 20 --adv_num 60000
+python noise_train.py --device cuda:0 --test_run 5 --method ballance --first 20 --epochs 300 --eta 0.15 --BS 128 --adv_ep 10 --adv_num 60000
+# python noise_train.py --device cuda:0 --epochs 800 --adv_num 10000 --test_run 1000 --method noise
 # python noise_train.py --device cuda:0 --adv_num 40000 --test_run 1000 --method comb --first 5 --adv_ep 5 --epochs 200
