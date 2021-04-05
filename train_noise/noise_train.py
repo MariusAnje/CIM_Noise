@@ -26,7 +26,7 @@ if __name__ == "__main__":
             help='input the batch size')
     parser.add_argument('--fname_head', action='store', default="GCONV_state_dict",
             help='input the filename')
-    parser.add_argument('--method', action='store', choices = ["normal", "noise", "adv", "comb"], default="adv", 
+    parser.add_argument('--method', action='store', choices = ["normal", "noise", "adv", "comb", "ballance"], default="adv", 
             help='input the training method')
     parser.add_argument('--epochs', action='store', type=int, default=5, 
             help='input the number of epochs for training')
@@ -80,6 +80,8 @@ if __name__ == "__main__":
         train_noise(args.epochs, mean, std, model, adv_set, BS, device, optimizer_noise, criterion, scheduler, testloader, f"{fname_head}_tmp_best.pt")
     elif args.method == "adv":
         train_adv(args.epochs,  args.first, args.adv_ep, mean, std, BS, eta, args.adv_num, model, adv_set, device, optimizer_normal, optimizer_noise, criterion, scheduler, testloader, trainloader, f"{fname_head}_tmp_best.pt")
+    elif args.method == "ballance":
+        train_adv_ballance(args.epochs,  args.first, args.adv_ep, mean, std, BS, eta, args.adv_num, model, adv_set, device, optimizer_normal, optimizer_noise, criterion, scheduler, testloader, trainloader, f"{fname_head}_tmp_best.pt")
     elif args.method == "comb":
         train_comb(args.epochs, args.first, args.adv_ep, mean, std, BS, eta, args.adv_num, model, adv_set, device, optimizer_normal, optimizer_noise, criterion, scheduler, testloader, trainloader, f"{fname_head}_tmp_best.pt")
     else:

@@ -70,14 +70,12 @@ class AdvDataset():
     def ballance_draw(self, num, BS):
         S = np.where(self.sens_table)[0]
         R = np.where(self.sens_table == 0)[0]
-        ratio = num / len(self.sens_table)
-        S_num = int(len(S) * ratio)
-        R_num = int(len(R) * ratio)
+        half = min(num, len(S), len(R))
 
-        if S_num != 0:
-            S = np.random.choice(S, S_num, replace=False)
-        if R_num < len(R):
-            R = np.random.choice(R, R_num, replace=False)
+        if half != 0 and half < len(S):
+            S = np.random.choice(S, half, replace=False)
+        if half != 0 and half < len(R):
+            R = np.random.choice(R, half, replace=False)
         T = np.concatenate([R,S])
         subset = torch.utils.data.Subset(self.total_set, T)
         subloader = torch.utils.data.DataLoader(subset, batch_size=BS,

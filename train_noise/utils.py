@@ -134,10 +134,7 @@ def train_adv(epochs, first, adv_ep, mean, std, BS, eta, num, model, adv_set, de
         print(f"noise: {correct}, num_adv: {num_adv}")
     for _ in range(first, epochs, adv_ep+1):
         trainloader, index = adv_set.whole_set(BS)
-        if num_adv >= len(adv_set.sens_table) // 6:
-            correct, _ = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
-        else:
-            correct, _ = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=False, noise=True)
+        correct, _ = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
         num_adv = adv_set.sens_table.sum()
         if correct > best_correct:
             best_correct = correct
@@ -150,7 +147,46 @@ def train_adv(epochs, first, adv_ep, mean, std, BS, eta, num, model, adv_set, de
                 best_correct = correct_adv
                 torch.save(model.state_dict(), fname)
             print(f"adv: {correct_adv}, num_sample: {num_sample}")
-            
+
+def train_adv_ballance(epochs, first, adv_ep, mean, std, BS, eta, num, model, adv_set, device, optimizer, optimizer_adv, criterion, scheduler, testloader, trainloader, fname):
+    """
+    epochs: number of total epochs
+    first: warmup epochs that trains all
+    adv_ep: number of adversarial epochs after each whole epoch 
+    """
+    best_correct = 0
+    Total_inf = len(adv_set.sens_table) * epochs
+    current_inf = 0
+    for _ in range(min(first, epochs)):
+        trainloader, index = adv_set.whole_set(BS)
+        correct, _ = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
+        num_adv = adv_set.sens_table.sum()
+        if correct > best_correct:
+            best_correct = correct
+            torch.save(model.state_dict(), fname)
+        print(f"noise: {correct}, num_adv: {num_adv}")
+        current_inf += len(adv_set.sens_table)
+    while current_inf <= Total_inf:
+        trainloader, index = adv_set.whole_set(BS)
+        correct, _ = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=True, noise=True)
+        num_adv = adv_set.sens_table.sum()
+        current_inf += len(adv_set.sens_table)
+        if correct > best_correct:
+            best_correct = correct
+            torch.save(model.state_dict(), fname)
+        print(f"noise: {correct}, num_adv: {num_adv}")
+        if num_adv < BS // 2:
+            break
+        for _ in range(adv_ep):
+            trainloader, index = adv_set.ballance_draw(num, BS)
+            correct_adv, num_sample = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer_adv, criterion, scheduler, testloader, update=False, noise=True)
+            current_inf += num_sample
+            if correct_adv > best_correct:
+                best_correct = correct_adv
+                torch.save(model.state_dict(), fname)
+            print(f"adv: {correct_adv}, num_sample: {num_sample}")
+
+
 def train_comb(epochs, first, adv_ep, mean, std, BS, eta, num, model, adv_set, device, optimizer, optimizer_adv, criterion, scheduler, testloader, trainloader, fname):
     """
     epochs: number of total epochs
