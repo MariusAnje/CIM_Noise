@@ -4,7 +4,6 @@ import torch.nn.functional as F
 import torch
 import numpy as np
 
-
 class GConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode='zeros'):
         super(GConv2d, self).__init__()
@@ -15,7 +14,7 @@ class GConv2d(nn.Module):
         self.noise = torch.zeros_like(self.conv.weight)
     
     def set_noise(self, mean, std):
-        self.noise = torch.randn_like(self.conv.weight)
+        self.noise = (torch.randn_like(self.conv.weight) * std) + mean
     
     def forward(self, x):
         return F.conv2d(x, self.conv.weight + self.noise, self.conv.bias, self.conv.stride, self.conv.padding, self.conv.dilation, self.conv.groups)
@@ -30,11 +29,58 @@ class GLinear(nn.Module):
         self.noise = torch.zeros_like(self.op.weight)
     
     def set_noise(self, mean, std):
-        self.noise = torch.randn_like(self.op.weight)
+        self.noise = (torch.randn_like(self.op.weight) * std) + mean
     
     def forward(self, x):
-        return F.linear(x, self.op.weight, self.op.bias)
+        return F.linear(x, self.op.weight + self.noise, self.op.bias)
 
+
+def set_quant_noise(nbits, ndevice, var, weights):
+    w_range = weights.abs().max()
+    noise = torch.zeros_like(weights)
+    for devices in range(int(np.ceil(nbits/ndevice))):
+        var = var / (2**ndevice)
+        noise += torch.randn_like(weights) * var * w_range
+    return noise
+    
+
+
+class QuantGConv2d(nn.Module):
+    def __init__(self, nbits, ndevice, var, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode='zeros'):
+        super(QuantGConv2d, self).__init__()
+        self.nbits = nbits
+        self.ndevice = ndevice
+        self.var = var
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode)
+        # self.noise = torch.zeros_like(self.conv.weight)
+    
+    def clear_noise(self):
+        self.noise = torch.zeros_like(self.conv.weight)
+    
+    def set_noise(self):
+        self.noise = set_quant_noise(self.nbits, self.ndevice, self.var, self.conv.weight)
+    
+    def forward(self, x):
+        return F.conv2d(x, self.conv.weight + self.noise, self.conv.bias, self.conv.stride, self.conv.padding, self.conv.dilation, self.conv.groups)
+
+class QuantGLinear(nn.Module):
+    def __init__(self, nbits, ndevice, var, in_features, out_features, bias=True):
+        super(QuantGLinear, self).__init__()
+        self.nbits = nbits
+        self.ndevice = ndevice
+        self.var = var
+        self.op = nn.Linear(in_features, out_features, bias)
+        # self.noise = torch.zeros_like(self.conv.weight)
+    
+    def clear_noise(self):
+        self.noise = torch.zeros_like(self.op.weight)
+    
+    def set_noise(self):
+        self.noise = set_quant_noise(self.nbits, self.ndevice, self.var, self.op.weight)
+    
+    def forward(self, x):
+        return F.linear(x, self.op.weight + self.noise, self.op.bias)
+        # return F.linear(x, self.op.weight, self.op.bias)
 
 
 class AdvDataset():

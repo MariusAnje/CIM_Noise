@@ -105,11 +105,11 @@ def train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, 
     num_sample = len(index)
     return correct, num_sample
 
-def train_noise(epochs, mean, std, model, adv_set, BS, device, optimizer, criterion, scheduler, testloader, fname):
+def train_noise(epochs, mean, std, eta, model, adv_set, BS, device, optimizer, criterion, scheduler, testloader, fname):
     best_correct = 0
     for epoch in range(epochs):
         trainloader, index = adv_set.whole_set(BS)
-        correct, num_adv = train_all_one_epoch(mean, std, 0, model, adv_set, BS, trainloader, index, device, optimizer, criterion, scheduler, testloader, update=False, noise=True)
+        correct, num_adv = train_all_one_epoch(mean, std, eta, model, adv_set, BS, trainloader, index, device, optimizer, criterion, scheduler, testloader, update=False, noise=True)
         num_adv = adv_set.sens_table.sum()
         if correct > best_correct:
             best_correct = correct

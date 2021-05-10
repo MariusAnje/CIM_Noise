@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 import pickle
 from tqdm import tqdm
 import numpy as np
-from models import LeNet_Gaussian, LeNet_Quant_Gaussian
+from models import LeNet_Gaussian, NSIM_Quant_Gaussian
 from modules import AdvDataset
 from utils import *
 import argparse
@@ -24,7 +24,7 @@ if __name__ == "__main__":
             help='input the device you want to use')
     parser.add_argument('--BS', action='store', type=int, default=128,
             help='input the batch size')
-    parser.add_argument('--fname_head', action='store', default="GCONV_state_dict",
+    parser.add_argument('--fname_head', action='store', default="NSIM_state_dict",
             help='input the filename')
     parser.add_argument('--method', action='store', choices = ["normal", "noise", "adv", "comb", "ballance"], default="adv", 
             help='input the training method')
@@ -47,17 +47,17 @@ if __name__ == "__main__":
 
     BS = args.BS
 
-    trainset = torchvision.datasets.MNIST(root='../data', train=True,
+    trainset = torchvision.datasets.CIFAR10(root='~/Private/data', train=True,
                                             download=False, transform=transforms.ToTensor())
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=BS,
                                             shuffle=True, num_workers=2)
 
-    testset = torchvision.datasets.MNIST(root='../data', train=False,
+    testset = torchvision.datasets.CIFAR10(root='~/Private/data', train=False,
                                         download=False, transform=transforms.ToTensor())
     testloader = torch.utils.data.DataLoader(testset, batch_size=BS,
                                             shuffle=False, num_workers=2)
 
-    model = LeNet_Quant_Gaussian()
+    model = NSIM_Quant_Gaussian()
     fname_head = args.fname_head + "_" + args.method + "_" + str(time.time())
 
     criterion = nn.CrossEntropyLoss()
