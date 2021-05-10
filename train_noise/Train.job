@@ -3,7 +3,7 @@
 #$ -M zyan2@nd.edu
 #$ -m a
 #$ -r y
-#$ -q gpu
+#$ -q gpu@qa-xp*
 #$ -N adv_train 
 #$ -pe smp 4
 #$ -l gpu=1
@@ -13,6 +13,12 @@ module load python
 
 # python noise_train.py --device cuda:0 --epochs 100 --adv_num 10000 --test_run 1000 --method normal
 # python noise_train.py --device cuda:0 --test_run 5 --method adv --first 20 --epochs 300 --eta 0.05 --BS 128 --adv_ep 20 --adv_num 60000
-python noise_train.py --device cuda:0 --test_run 5 --method ballance --first 20 --epochs 300 --eta 0.15 --BS 128 --adv_ep 10 --adv_num 60000
-# python noise_train.py --device cuda:0 --epochs 800 --adv_num 10000 --test_run 1000 --method noise
-# python noise_train.py --device cuda:0 --adv_num 40000 --test_run 1000 --method comb --first 5 --adv_ep 5 --epochs 200
+python noise_train.py --device cuda:0 --test_run 5 --method ballance --adv_num 40000 --first 5 --epochs 300 --BS 128 --eta 0.10 --adv_ep 9
+# python noise_train.py --device cuda:0 --epochs 500 --adv_num 10000 --test_run 10 --method noise --eta 0.05
+# python noise_train.py --device cuda:0 --epochs 300 --adv_num 40000 --test_run 5 --method comb --BS 128 --first 5 --eta 0.07 --adv_ep 10
+#
+
+# python cifar_train.py --device cuda:0 --epochs 200 --adv_num 10000 --test_run 10 --method noise --eta 0.05
+# python cifar_train.py --device cuda:0 --test_run 5 --method ballance --first 20 --epochs 200 --eta 0.01 --BS 128 --adv_ep 10 --adv_num 60000
+
+# python new.py --test_run 15
